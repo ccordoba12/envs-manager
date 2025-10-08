@@ -40,8 +40,10 @@ def pyexec_from_pixi_env_path(path: Path) -> str:
 class PixiInterface(BackendInstance):
     ID = "pixi"
 
-    def __init__(self, environment_path, envs_directory, bin_directory):
-        super().__init__(environment_path, envs_directory, bin_directory)
+    def __init__(self, environment_path, envs_directory, bin_directory, python_version):
+        super().__init__(
+            environment_path, envs_directory, bin_directory, python_version
+        )
 
         # We use this to save the Pixi packages cache directory
         self._cache_dir = None
@@ -150,25 +152,30 @@ class PixiInterface(BackendInstance):
             logger.error(error, exc_info=True)
             return BackendActionResult(status=False, output=str(error))
 
+        command = [
+            self.external_executable,
+            "add",
+            f"python={self.python_version}" if self.python_version else "python",
+        ]
         if packages:
             if not isinstance(packages, list):
                 packages = [packages]
+            command = command + packages
 
-            command = [self.external_executable, "add"] + packages
-            try:
-                result = run_command(
-                    command, capture_output=True, cwd=self.environment_path
-                )
-                output = (result.stdout or result.stderr).strip()
-                logger.info(output)
-                return BackendActionResult(status=True, output=output)
-            except subprocess.CalledProcessError as error:
-                error_text = error.stderr.strip()
-                logger.error(error_text)
-                return BackendActionResult(status=False, output=error_text)
-            except Exception as error:
-                logger.error(error, exc_info=True)
-                return BackendActionResult(status=False, output=str(error))
+        try:
+            result = run_command(
+                command, capture_output=True, cwd=self.environment_path
+            )
+            output = (result.stdout or result.stderr).strip()
+            logger.info(output)
+            return BackendActionResult(status=True, output=output)
+        except subprocess.CalledProcessError as error:
+            error_text = error.stderr.strip()
+            logger.error(error_text)
+            return BackendActionResult(status=False, output=error_text)
+        except Exception as error:
+            logger.error(error, exc_info=True)
+            return BackendActionResult(status=False, output=str(error))
 
     def delete_environment(self, force=False):
         # There is no command in Pixi to remove an env, so we rely on the OS
