@@ -37,6 +37,20 @@ def pyexec_from_pixi_env_path(path: Path) -> str:
     return str(python_executable_path)
 
 
+def get_python_version_from_toml_file(path: Path) -> str:
+    """Get Python version from a given Pixi toml file."""
+    with open(path, "rb") as f:
+        pixi_toml = tomllib.load(f)
+
+    python_version = None
+    try:
+        python_version = pixi_toml["dependencies"]["python"].split(".*")[0]
+    except KeyError:
+        pass
+
+    return python_version
+
+
 class PixiInterface(BackendInstance):
     ID = "pixi"
 
@@ -473,11 +487,11 @@ class PixiInterface(BackendInstance):
         for env_dir_path in Path(self.envs_directory).iterdir():
             # Get Python version
             pixi_toml_path = env_dir_path / "pixi.toml"
+            python_version = get_python_version_from_toml_file(pixi_toml_path)
 
-            with open(pixi_toml_path, "rb") as f:
-                pixi_toml = tomllib.load(f)
-
-            python_version = pixi_toml["dependencies"]["python"].split(".*")[0]
+            # If the env doesn't have Python, we can't use it.
+            if python_version is None:
+                continue
 
             # Add env info to dict
             environments[env_dir_path.name] = (
