@@ -16,6 +16,11 @@ import requests
 
 from envs_manager.backends.api import BackendInstance, BackendActionResult, run_command
 
+try:
+    import tomllib  # Python 3.11+
+except ImportError:
+    import tomli as tomllib
+
 
 logger = logging.getLogger("envs-manager")
 
@@ -458,11 +463,27 @@ class PixiInterface(BackendInstance):
 
         logger.info(f"# {self.ID} environments")
         for env_dir_path in Path(self.envs_directory).iterdir():
-            environments[env_dir_path.name] = str(env_dir_path)
+            # Get Python version
+            pixi_toml_path = env_dir_path / "pixi.toml"
+
+            with open(pixi_toml_path, "rb") as f:
+                pixi_toml = tomllib.load(f)
+
+            python_version = pixi_toml["dependencies"]["python"].split(".*")[0]
+
+            # Add env info to dict
+            environments[env_dir_path.name] = (
+                str(env_dir_path),
+                f"Python {python_version}",
+            )
+
+            # Output printed to the console
             logger.info(f"{env_dir_path.name} - {str(env_dir_path)}")
 
         return BackendActionResult(status=True, output=environments)
 
+    # ---- Private API
+    # ----------------------------------------------------------------------------------
     def _get_package_info(self, package_dir):
         """
         Get package information from the Pixi packages cache.
