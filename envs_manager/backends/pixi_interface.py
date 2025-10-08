@@ -7,6 +7,7 @@ import json
 import logging
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import zipfile
 
@@ -161,10 +162,18 @@ class PixiInterface(BackendInstance):
         except subprocess.CalledProcessError as error:
             error_text = error.stderr.strip()
             logger.error(error_text)
-            return BackendActionResult(status=False, output=error_text)
+            remove_path_error = self._remove_environment_path()
+            return BackendActionResult(
+                status=False,
+                output=remove_path_error if remove_path_error else error_text,
+            )
         except Exception as error:
             logger.error(error, exc_info=True)
-            return BackendActionResult(status=False, output=str(error))
+            remove_path_error = self._remove_environment_path()
+            return BackendActionResult(
+                status=False,
+                output=remove_path_error if remove_path_error else str(error),
+            )
 
         command = [
             self.external_executable,
@@ -186,10 +195,18 @@ class PixiInterface(BackendInstance):
         except subprocess.CalledProcessError as error:
             error_text = error.stderr.strip()
             logger.error(error_text)
-            return BackendActionResult(status=False, output=error_text)
+            remove_path_error = self._remove_environment_path()
+            return BackendActionResult(
+                status=False,
+                output=remove_path_error if remove_path_error else error_text,
+            )
         except Exception as error:
             logger.error(error, exc_info=True)
-            return BackendActionResult(status=False, output=str(error))
+            remove_path_error = self._remove_environment_path()
+            return BackendActionResult(
+                status=False,
+                output=remove_path_error if remove_path_error else str(error),
+            )
 
     def delete_environment(self, force=False):
         # There is no command in Pixi to remove an env, so we rely on the OS
@@ -536,3 +553,10 @@ class PixiInterface(BackendInstance):
             info = AboutJson.from_package_directory(str(absolute_package_dir))
 
         return info
+
+    def _remove_environment_path(self):
+        try:
+            shutil.rmtree(self.environment_path, ignore_errors=False)
+        except Exception as error:
+            logger.error(error, exc_info=True)
+            return str(error)
