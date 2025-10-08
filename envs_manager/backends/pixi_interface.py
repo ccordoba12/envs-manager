@@ -25,6 +25,18 @@ except ImportError:
 logger = logging.getLogger("envs-manager")
 
 
+def pyexec_from_pixi_env_path(path: Path) -> str:
+    """Return path to the Python executable given a Pixi environment path."""
+    pixi_env_dir = Path() / ".pixi" / "envs" / "default"
+
+    if os.name == "nt":
+        python_executable_path = path / pixi_env_dir / "python.exe"
+    else:
+        python_executable_path = path / pixi_env_dir / "bin" / "python"
+
+    return str(python_executable_path)
+
+
 class PixiInterface(BackendInstance):
     ID = "pixi"
 
@@ -36,18 +48,7 @@ class PixiInterface(BackendInstance):
 
     @property
     def python_executable_path(self):
-        pixi_env_dir = Path() / ".pixi" / "envs" / "default"
-
-        if os.name == "nt":
-            python_executable_path = (
-                Path(self.environment_path) / pixi_env_dir / "python.exe"
-            )
-        else:
-            python_executable_path = (
-                Path(self.environment_path) / pixi_env_dir / "bin" / "python"
-            )
-
-        return str(python_executable_path)
+        return pyexec_from_pixi_env_path(Path(self.environment_path))
 
     def validate(self):
         self.external_executable = self.find_backend_executable(exec_name="pixi")
