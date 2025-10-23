@@ -209,24 +209,10 @@ class PixiInterface(BackendInstance):
             )
 
     def delete_environment(self, force=False):
-        # There is no command in Pixi to remove an env, so we rely on the OS
-        # for that.
-        # TODO: Add validation on Windows when the env is in use
-        command = [
-            "rmdir" if os.name == "nt" else "rm",
-            "/S" if os.name == "nt" else "-r",  # Remove all files and subdirs
-            "/Q" if os.name == "nt" else "-f",  # Don't ask
-            self.environment_path,
-        ]
-
         try:
-            result = run_command(command, capture_output=True)
+            shutil.rmtree(self.environment_path, ignore_errors=False)
             logger.info(f"Deleting environment located at {self.environment_path}")
-            return BackendActionResult(status=True, output=result.stdout)
-        except subprocess.CalledProcessError as error:
-            error_text = error.stderr.strip()
-            logger.info(error_text)
-            return BackendActionResult(status=False, output=error_text)
+            return BackendActionResult(status=True, output="")
         except Exception as error:
             logger.info(error, exc_info=True)
             return BackendActionResult(status=False, output=str(error))
